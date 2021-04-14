@@ -11,6 +11,8 @@ const { v4: uuid } = require("uuid");
 
 const passwordPepper = "SeCretPeppa4MySal+";
 
+const Joi = require("joi");
+
 router.get("/", async (req, res) => {
   console.log("page hit");
   try {
@@ -99,7 +101,12 @@ router.get("/deleteUser", async (req, res) => {
 router.post("/addUser", async (req, res) => {
   try {
     console.log("form submit");
-
+    const schema = Joi.string().max(10).required();
+    const validationResult = schema.validate(req.query.id);
+    if (validationResult.error != null) {
+      console.log(validationResult.error);
+      throw validationResult.error;
+    }
     const password_salt = crypto.createHash("sha512");
 
     password_salt.update(uuid());
@@ -118,8 +125,8 @@ router.post("/addUser", async (req, res) => {
     await newUser.save();
     res.redirect("/");
   } catch (ex) {
-    res.render("error", { message: "Error connecting to MySQL" });
-    console.log("Error connecting to MySQL");
+    res.render("error", { message: "Error connecting to Mongo" });
+    console.log("Error connecting to Mongo");
     console.log(ex);
   }
 });

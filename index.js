@@ -15,9 +15,9 @@ const port = process.env.PORT || 3000;
 
 database.connect((err, dbConnection) => {
   if (!err) {
-    console.log("Successfully connected to MongoDB");
+    console.log("Successfully connected to MySQL");
   } else {
-    console.log("Error Connecting to MongoDB");
+    console.log("Error Connecting to MySQL");
     console.log(err);
   }
 });
