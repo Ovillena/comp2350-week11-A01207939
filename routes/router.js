@@ -12,6 +12,7 @@ const { v4: uuid } = require("uuid");
 const passwordPepper = "SeCretPeppa4MySal+";
 
 const Joi = require("joi");
+const { ObjectId } = require("bson");
 
 router.get("/", async (req, res) => {
   console.log("page hit");
@@ -78,18 +79,12 @@ router.get("/showPets", async (req, res) => {
 
 router.get("/deleteUser", async (req, res) => {
   try {
-    console.log("delete user");
-
     let userId = req.query.id;
-    if (userId) {
-      console.log("userId: " + userId);
-      let deleteUser = await userModel.findByPk(userId);
-      console.log("deleteUser: ");
-      console.log(deleteUser);
-      if (deleteUser !== null) {
-        await deleteUser.destroy();
-      }
-    }
+    console.log("delete user");
+    console.log(userId);
+
+    const userCollection = database.db("lab_example").collection("users");
+    userCollection.deleteOne({ _id: ObjectId(`${userId}`) });
     res.redirect("/");
   } catch (ex) {
     res.render("error", { message: "Error connecting to MySQL" });
@@ -98,15 +93,34 @@ router.get("/deleteUser", async (req, res) => {
   }
 });
 
+////----------------------------------------------------------------
 router.post("/addUser", async (req, res) => {
   try {
     console.log("form submit");
-    const schema = Joi.string().max(10).required();
-    const validationResult = schema.validate(req.query.id);
+    console.log(req.body);
+
+    // const schema = await Joi.string().max(15).required();
+    // const validationResult = await schema.validate(req.body.first_name);
+    // if (validationResult.error != null) {
+    //   console.log(validationResult.error);
+    //   throw validationResult.error;
+    // }
+
+    const schema = await Joi.object({
+      first_name: Joi.string().max(15).required(),
+      last_name: Joi.string().max(15).required(),
+      email: Joi.string().max(50).required(),
+      password: Joi.string().pattern(new RegExp("^[a-zA-Z0-9]{3,30}$")),
+      //regex allows only letters and number. NOT Special characters
+    });
+    const validationResult = await schema.validate(req.body);
     if (validationResult.error != null) {
       console.log(validationResult.error);
+      res.render("error", { message: "Error: Trying to add invalid user" });
+
       throw validationResult.error;
     }
+
     const password_salt = crypto.createHash("sha512");
 
     password_salt.update(uuid());
@@ -115,14 +129,14 @@ router.post("/addUser", async (req, res) => {
 
     password_hash.update(req.body.password + passwordPepper + password_salt);
 
-    let newUser = userModel.build({
+    const userCollection = database.db("lab_example").collection("users");
+    await userCollection.insertOne({
       first_name: req.body.first_name,
       last_name: req.body.last_name,
       email: req.body.email,
       password_salt: password_salt.digest("hex"),
       password_hash: password_hash.digest("hex"),
     });
-    await newUser.save();
     res.redirect("/");
   } catch (ex) {
     res.render("error", { message: "Error connecting to Mongo" });
